@@ -65,7 +65,7 @@ namespace ReplayReplacer.source.replayreplacer
 
         public byte[] _headerBinary = new byte[HEADER_SIZE];
 
-        public void fromBytes(byte[] bytearray)
+        public void FromBytes(byte[] bytearray)
         {
             using (var ms = new MemoryStream(bytearray))
                 using (var br = new BinaryReader(ms))
@@ -107,7 +107,7 @@ namespace ReplayReplacer.source.replayreplacer
             }
         }
 
-        public void fromFile(String FilePath)
+        public void FromFile(String FilePath)
         {
             byte[] bytes;
             using (var fs = File.OpenRead(FilePath))
@@ -121,7 +121,7 @@ namespace ReplayReplacer.source.replayreplacer
             // but that's a problem for future me.
             // can technically load into _headerBytes first and then call
             // from bytes with a little bit of logic.
-            fromBytes(bytes);
+            FromBytes(bytes);
         }
     }
 }
