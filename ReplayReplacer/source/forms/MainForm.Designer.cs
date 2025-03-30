@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             label1 = new Label();
+            flowLayoutPanel1 = new FlowLayoutPanel();
             SuspendLayout();
             // 
             // label1
@@ -40,11 +41,19 @@
             label1.TabIndex = 0;
             label1.Text = "label1";
             // 
+            // flowLayoutPanel1
+            // 
+            flowLayoutPanel1.Location = new Point(71, 110);
+            flowLayoutPanel1.Name = "flowLayoutPanel1";
+            flowLayoutPanel1.Size = new Size(689, 328);
+            flowLayoutPanel1.TabIndex = 1;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(flowLayoutPanel1);
             Controls.Add(label1);
             Name = "MainForm";
             Text = "Form1";
@@ -56,5 +65,6 @@
         #endregion
 
         private Label label1;
+        private FlowLayoutPanel flowLayoutPanel1;
     }
 }

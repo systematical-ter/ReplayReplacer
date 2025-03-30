@@ -4,25 +4,45 @@ using System.Linq;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Threading.Tasks;
-using Force.Crc32;
 
 namespace ReplayReplacer.source.replayreplacer
 {
     internal class ReplayList
     {
-        String s1;
-        String s2;
-        int n1;
-        int n2=0;
-        int n3=0;
+        private const int ENTRIES_OFFSET = 0x8;
+        private const int ENTRY_SIZE = 0x390;
+        private const int N_ENTRIES = 100;
 
-        int reread_year;
-        byte[] hashed;
-        String name;
+        private byte[] header = new byte[ENTRIES_OFFSET];
+        private ReplayHeader[] entries = new ReplayHeader[N_ENTRIES];
 
-        public void FromFile(string ReplayListPath)
+        public ReplayList(string ReplayListPath) 
+        { 
+            using (var fs = File.OpenRead(ReplayListPath))
+                using (var br = new BinaryReader(fs))
+            {
+                header = br.ReadBytes(ENTRIES_OFFSET);
+                for (int i = 0; i < 100; i++)
+                {
+                    var dat = br.ReadBytes(ENTRY_SIZE);
+                    entries[i] = ReplayHeader.FromHeaderBytes(dat);
+                }
+            }
+        }
+
+        public List<Label> GetP1Names()
         {
-
+            var names = new List<Label>();
+            for (int i = 0; i < 100; i ++)
+            {
+                if(entries[i].IsValid)
+                {
+                    var l = new Label();
+                    l.Text = entries[i].P1Name;
+                    names.Add(l);
+                }
+            }
+            return names;
         }
 
         public void DummyTestRewriting(string ReplayListPath)
@@ -55,11 +75,6 @@ namespace ReplayReplacer.source.replayreplacer
             {
                 reader.Write(chsm);
             }
-        }
-
-        public override string ToString()
-        {
-            return (s1 + " " + n1 + " " + n2 + " " + n3);
         }
 
         public static ushort CreateChecksum(byte[] data)

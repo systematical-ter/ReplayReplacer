@@ -7,14 +7,14 @@ namespace ReplayReplacer
         public MainForm()
         {
             InitializeComponent();
+            ReplayList rl = new ReplayList("C:\\Program Files (x86)\\Steam\\steamapps\\common\\BlazBlue Centralfiction\\Save\\replay_list.dat");
+            label1.Text = rl.ToString();
 
-
-            Replay r = new Replay();
-            r.FromFile("C:\\Program Files (x86)\\Steam\\steamapps\\common\\BlazBlue Centralfiction\\Save\\Replay\\replay09.dat");
-
-            ReplayList rl = new ReplayList();
-            rl.FromFile("C:\\Program Files (x86)\\Steam\\steamapps\\common\\BlazBlue Centralfiction\\Save\\replay_list.dat");
-            label1.Text = r.ToString();
+            var p1NameLabels = rl.GetP1Names();
+            for (int i = 0; i < p1NameLabels.Count; i++)
+            {
+                flowLayoutPanel1.Controls.Add(p1NameLabels[i]);
+            }
         }
 
         private void MainForm_Load(object sender, EventArgs e)

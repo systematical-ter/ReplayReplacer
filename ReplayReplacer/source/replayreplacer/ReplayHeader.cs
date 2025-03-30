@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ReplayReplacer.source.replayreplacer
 {
@@ -61,67 +64,105 @@ namespace ReplayReplacer.source.replayreplacer
         private uint    _p1Level; // was labelled "minus one"?
         private uint    _p2Level;
 
+        public string P1Name { get; private set; } = "";
+        public string P2Name { get; private set; } = "";
+        public DateTime Date1 { get; private set; } = DateTime.Now;
+        public DateTime Date2 { get; private set; } = DateTime.Now;
+
+        public bool IsValid => _valid != 0;
+        
         // ... and I'm not dealing with the rest yet.
 
         public byte[] _headerBinary = new byte[HEADER_SIZE];
 
-        public void FromBytes(byte[] bytearray)
-        {
-            using (var ms = new MemoryStream(bytearray))
-                using (var br = new BinaryReader(ms))
-            {
-                // yeet the entire header into storage first.
-                _headerBinary = br.ReadBytes(HEADER_SIZE);
-                br.BaseStream.Seek(0, SeekOrigin.Begin);
 
-                _unknown0x08        = br.ReadBytes(0x08);
-                _valid              = br.ReadUInt32();
-                _unknown0x14        = br.ReadBytes(0x0c);
-                for (int i = 0; i < 6; i ++)
-                {
-                    _date1Ints[i]   = br.ReadUInt32();
-                }
-                _date1Char          = br.ReadChars(0x18);
-                _unknown0x50        = br.ReadBytes(0x10);
-                for (int i = 0; i < 6; i ++)
-                {
-                    _date2Ints[i]   = br.ReadUInt32();
-                }
-                _date2Char          = br.ReadChars(0x18);
-                _unknown0x90        = br.ReadBytes(0x8);
-                _winnerFlag         = br.ReadUInt32();
-                _p1SteamID          = br.ReadUInt64();
-                _p1NameBytes        = br.ReadBytes(0x12 * 2);
-                _unknown0xc8        = br.ReadBytes(0x9e);
-                _p2SteamID          = br.ReadUInt64();
-                _p2NameBytes        = br.ReadBytes(0x12 * 2);
-                _unknown0x192       = br.ReadBytes(0x9e);
-                _p1Char             = br.ReadUInt32();
-                _p2Char             = br.ReadUInt32();
-                _recorderSteamID    = br.ReadUInt64();
-                _recorderNameBytes  = br.ReadBytes(0x12 * 2);
-                _unknown0x264       = br.ReadBytes(0x314 - 0x264);
-                _p1Level            = br.ReadUInt32();
-                _p2Level            = br.ReadUInt32();
-                
-            }
-        }
-
-        public void FromFile(String FilePath)
+        public static ReplayHeader FromFile(string filePath)
         {
             byte[] bytes;
-            using (var fs = File.OpenRead(FilePath))
+            using (var fs = File.OpenRead(filePath))
                 using (var br = new BinaryReader(fs))
             {
                 br.BaseStream.Seek(HEADER_OFFSET, SeekOrigin.Begin);
                 bytes = br.ReadBytes(HEADER_SIZE);
             }
 
-            // being a little silly here, have 2 copies of the header bytes
-            // but that's a problem for future me.
-            // can technically load into _headerBytes first and then call
-            // from bytes with a little bit of logic.
-            FromBytes(bytes);
+            return FromHeaderBytes(bytes);
+
+        }
+
+        public static ReplayHeader FromHeaderBytes(byte[] byteArray)
+        {
+            var header = new ReplayHeader();
+            using (var ms = new MemoryStream(byteArray))
+                using (var br = new BinaryReader(ms))
+            {
+                // yeet the entire header into storage first.
+                header._headerBinary = br.ReadBytes(HEADER_SIZE);
+                br.BaseStream.Seek(0, SeekOrigin.Begin);
+
+                header._unknown0x08        = br.ReadBytes(0x08);
+                header._valid              = br.ReadUInt32();
+                header._unknown0x14        = br.ReadBytes(0x0c);
+                for (int i = 0; i < 6; i ++)
+                {
+                    header._date1Ints[i]   = br.ReadUInt32();
+                }
+                header._date1Char          = br.ReadChars(0x18);
+                header._unknown0x50        = br.ReadBytes(0x10);
+                for (int i = 0; i < 6; i ++)
+                {
+                    header._date2Ints[i]   = br.ReadUInt32();
+                }
+                header._date2Char          = br.ReadChars(0x18);
+                header._unknown0x90        = br.ReadBytes(0x8);
+                header._winnerFlag         = br.ReadUInt32();
+                header._p1SteamID          = br.ReadUInt64();
+                header._p1NameBytes        = br.ReadBytes(0x12 * 2);
+                header._unknown0xc8        = br.ReadBytes(0x9e);
+                header._p2SteamID          = br.ReadUInt64();
+                header._p2NameBytes        = br.ReadBytes(0x12 * 2);
+                header._unknown0x192       = br.ReadBytes(0x9e);
+                header._p1Char             = br.ReadUInt32();
+                header._p2Char             = br.ReadUInt32();
+                header._recorderSteamID    = br.ReadUInt64();
+                header._recorderNameBytes  = br.ReadBytes(0x12 * 2);
+                header._unknown0x264       = br.ReadBytes(0x314 - 0x264);
+                header._p1Level            = br.ReadUInt32();
+                header._p2Level            = br.ReadUInt32();
+                
+            }
+            header.PopulatePrettyData();
+            return header;
+        }
+
+        private void PopulatePrettyData()
+        {
+            P1Name = ParseNameBinary(_p1NameBytes);
+            P2Name = ParseNameBinary(_p2NameBytes);
+            Date1 = ParseDate(_date1Ints);
+            Date2 = ParseDate(_date2Ints);
+        }
+
+        private static string ParseNameBinary(byte[] nameBinary)
+        {
+            // names are stored in unicode
+            // appears to be some "lazy writing" -- if the new name is shorter than what was there previously,
+            //      it doesn't bother nulling out the old data.
+            // therefore, we have to split on the first terminator we see, not just strip.
+            var name = Encoding.Unicode.GetString(nameBinary).Split('\0')[0];
+            return name;
+        }
+
+        private static DateTime ParseDate(uint[] dateInts)
+        {
+            var strDate = string.Join(':', dateInts.Select(n => n.ToString()));
+            DateTime dateOut = DateTime.Now;
+            if (!DateTime.TryParseExact(strDate, "yyyy:M:d:H:m:s", CultureInfo.CurrentCulture, DateTimeStyles.None, out dateOut))
+            {
+                // ... Handle failed parsing
+                throw new FileFormatException("Cannot translate " + strDate + " into a date.");
+            }
+            return dateOut;
         }
     }
 }
